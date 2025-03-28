@@ -1,37 +1,124 @@
 "use client";
+import { parse, print } from "graphql";
 import * as prettier from "prettier/standalone";
 import { useCallback, useEffect, useState } from "react";
 import * as defaultValues from "@/data/types";
 import { CodeBlock } from "../utils/CodeBlock";
 import { Container } from "../utils/Container";
 import { Spinner } from "../utils/Spinner";
+// Import the shopify-types.json file
+import shopifyTypes from "@/data/shopify-types.json";
 
+interface TYPE {
+  kind: string;
+  name: string;
+  ofType: any;
+}
+// Define GraphQLType interface to match the structure in the JSON file
+interface GraphQLType {
+  kind: string;
+  name: string;
+  fields?: Array<{
+    name: string;
+    type: any;
+  }>;
+
+  enumValues?: {
+    name: string;
+    description: string;
+    isDeprecated: boolean;
+    deprecationReason: null | string;
+  }[];
+
+  inputFields?: {
+    name: string;
+    description: string;
+    type: TYPE;
+    defaultValue: null;
+  }[];
+
+  possibleTypes?: TYPE[];
+}
+
+const a = new Set();
 export function Playground() {
-  const [apiKey, setApiKey] = useState<string>(
-    localStorage.getItem("apiKey") || ""
-  );
-  const [typeDefs] = useState<string>(defaultValues.typeDefs);
-  const [query, setQuery] = useState<string>(
-    localStorage.getItem("query") || defaultValues.query
-  );
+  const [apiKey, setApiKey] = useState<string>("");
 
-  const [generatedQuery, setGeneratedQuery] = useState<string>(
-    defaultValues.response
-  );
+  const [query, setQuery] = useState<string>(defaultValues.query);
+
+  const [generatedQuery, setGeneratedQuery] = useState<string>("");
   const [generatedVariables, setGeneratedVariables] = useState<
     Record<string, unknown>
-  >(JSON.parse(defaultValues.args));
+  >(JSON.parse("{}"));
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [generatedTypes, setGeneratedTypes] = useState<string>("");
 
   useEffect(() => {
-    localStorage.setItem("apiKey", apiKey);
-  }, [apiKey]);
+    function generateTypeScriptTypes(graphQLTypes: GraphQLType[]): string {
+      let types = "";
 
-  useEffect(() => {
-    localStorage.setItem("query", query);
-  }, [query]);
+      graphQLTypes.forEach((type) => {
+        if (type.kind === "SCALAR") {
+          types += `scalar ${type.name}\n`;
+        } else if (type.kind === "OBJECT") {
+          types += `type ${type.name} {\n`;
+          type.fields?.forEach((field) => {
+            types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
+          });
+          types += "}\n";
+        } else if (type.kind === "ENUM") {
+          types += `enum ${type.name} {\n`;
+          type.enumValues?.forEach((enumValue) => {
+            types += `  ${enumValue.name}\n`;
+          });
+          types += "}\n";
+        } else if (type.kind === "INPUT_OBJECT") {
+          types += `input ${type.name} {\n`;
+          type.inputFields?.forEach((field) => {
+            types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
+          });
+          types += "}\n";
+        } else if (type.kind === "UNION") {
+          types += `union ${type.name} = `;
+          types += type.possibleTypes
+            ?.map((possibleType) => possibleType.name)
+            .join(" | ");
+          types += "\n";
+        } else if (type.kind === "INTERFACE") {
+          types += `interface ${type.name} {\n`;
+          type.fields?.forEach((field) => {
+            types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
+          });
+          types += "}\n";
+        }
+      });
+
+      return types;
+    }
+
+    function generateFieldType(fieldType: any, name: any): string {
+      if (!fieldType) return name;
+      const a: any = {
+        SCALAR: fieldType.name,
+        LIST: `[${generateFieldType(fieldType.ofType, fieldType.name)}]`,
+        OBJECT: fieldType.name,
+        NON_NULL: `${generateFieldType(fieldType.ofType, fieldType.name)}!`,
+        ENUM: fieldType.name,
+        INPUT_OBJECT: fieldType.name,
+        INTERFACE: fieldType.name,
+        UNION: fieldType.name,
+      };
+
+      return a[fieldType.kind] || "any";
+    }
+
+    // Use the imported shopify-types.json instead of response.data.__schema.types
+    const types = generateTypeScriptTypes(shopifyTypes as GraphQLType[]);
+    console.log(types); // Output all types as TypeScript code
+    setGeneratedTypes(types); // Store the generated types in state if you want to display them
+  }, []);
 
   const generate = useCallback(async () => {
     try {
@@ -44,7 +131,7 @@ export function Playground() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          typeDefs,
+          typeDefs: print(parse(generatedTypes)),
           query,
           apiKey,
         }),
@@ -72,7 +159,7 @@ export function Playground() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, typeDefs, query]);
+  }, [apiKey, generatedTypes, query]);
 
   return (
     <div className="bg-graphiql-medium py-10">
@@ -134,13 +221,6 @@ export function Playground() {
           )}
           <div className="flex gap-10 w-full">
             <div className="bg-graphiql-dark rounded-xl w-5/6">
-              <CodeBlock
-                title="schema.graphql"
-                code={typeDefs}
-                language="graphql"
-              />
-            </div>
-            <div className="bg-graphiql-dark rounded-xl w-5/6">
               <div className="flex flex-col">
                 <CodeBlock
                   title="query.graphql"
@@ -155,6 +235,16 @@ export function Playground() {
               </div>
             </div>
           </div>
+          {/* Optionally display the generated TypeScript types */}
+          {generatedTypes && (
+            <div className="bg-graphiql-dark rounded-xl w-full">
+              <CodeBlock
+                title="generated-types.ts"
+                code={generatedTypes}
+                language="typescript"
+              />
+            </div>
+          )}
         </div>
       </Container>
     </div>
