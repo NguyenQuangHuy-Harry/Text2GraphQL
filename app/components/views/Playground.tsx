@@ -40,7 +40,6 @@ interface GraphQLType {
   possibleTypes?: TYPE[];
 }
 
-const a = new Set();
 export function Playground() {
   const [apiKey, setApiKey] = useState<string>("");
 
@@ -53,72 +52,72 @@ export function Playground() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
-  const [generatedTypes, setGeneratedTypes] = useState<string>("");
+  // const [generatedTypes, setGeneratedTypes] = useState<string>("");
 
-  useEffect(() => {
-    function generateTypeScriptTypes(graphQLTypes: GraphQLType[]): string {
-      let types = "";
+  // useEffect(() => {
+  //   function generateTypeScriptTypes(graphQLTypes: GraphQLType[]): string {
+  //     let types = "";
 
-      graphQLTypes.forEach((type) => {
-        if (type.kind === "SCALAR") {
-          types += `scalar ${type.name}\n`;
-        } else if (type.kind === "OBJECT") {
-          types += `type ${type.name} {\n`;
-          type.fields?.forEach((field) => {
-            types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
-          });
-          types += "}\n";
-        } else if (type.kind === "ENUM") {
-          types += `enum ${type.name} {\n`;
-          type.enumValues?.forEach((enumValue) => {
-            types += `  ${enumValue.name}\n`;
-          });
-          types += "}\n";
-        } else if (type.kind === "INPUT_OBJECT") {
-          types += `input ${type.name} {\n`;
-          type.inputFields?.forEach((field) => {
-            types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
-          });
-          types += "}\n";
-        } else if (type.kind === "UNION") {
-          types += `union ${type.name} = `;
-          types += type.possibleTypes
-            ?.map((possibleType) => possibleType.name)
-            .join(" | ");
-          types += "\n";
-        } else if (type.kind === "INTERFACE") {
-          types += `interface ${type.name} {\n`;
-          type.fields?.forEach((field) => {
-            types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
-          });
-          types += "}\n";
-        }
-      });
+  //     graphQLTypes.forEach((type) => {
+  //       if (type.kind === "SCALAR") {
+  //         types += `scalar ${type.name}\n`;
+  //       } else if (type.kind === "OBJECT") {
+  //         types += `type ${type.name} {\n`;
+  //         type.fields?.forEach((field) => {
+  //           types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
+  //         });
+  //         types += "}\n";
+  //       } else if (type.kind === "ENUM") {
+  //         types += `enum ${type.name} {\n`;
+  //         type.enumValues?.forEach((enumValue) => {
+  //           types += `  ${enumValue.name}\n`;
+  //         });
+  //         types += "}\n";
+  //       } else if (type.kind === "INPUT_OBJECT") {
+  //         types += `input ${type.name} {\n`;
+  //         type.inputFields?.forEach((field) => {
+  //           types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
+  //         });
+  //         types += "}\n";
+  //       } else if (type.kind === "UNION") {
+  //         types += `union ${type.name} = `;
+  //         types += type.possibleTypes
+  //           ?.map((possibleType) => possibleType.name)
+  //           .join(" | ");
+  //         types += "\n";
+  //       } else if (type.kind === "INTERFACE") {
+  //         types += `interface ${type.name} {\n`;
+  //         type.fields?.forEach((field) => {
+  //           types += `  ${field.name}: ${generateFieldType(field.type, field.name)}\n`;
+  //         });
+  //         types += "}\n";
+  //       }
+  //     });
 
-      return types;
-    }
+  //     return types;
+  //   }
 
-    function generateFieldType(fieldType: any, name: any): string {
-      if (!fieldType) return name;
-      const a: any = {
-        SCALAR: fieldType.name,
-        LIST: `[${generateFieldType(fieldType.ofType, fieldType.name)}]`,
-        OBJECT: fieldType.name,
-        NON_NULL: `${generateFieldType(fieldType.ofType, fieldType.name)}!`,
-        ENUM: fieldType.name,
-        INPUT_OBJECT: fieldType.name,
-        INTERFACE: fieldType.name,
-        UNION: fieldType.name,
-      };
+  //   function generateFieldType(fieldType: any, name: any): string {
+  //     if (!fieldType) return name;
+  //     const a: any = {
+  //       SCALAR: fieldType.name,
+  //       LIST: `[${generateFieldType(fieldType.ofType, fieldType.name)}]`,
+  //       OBJECT: fieldType.name,
+  //       NON_NULL: `${generateFieldType(fieldType.ofType, fieldType.name)}!`,
+  //       ENUM: fieldType.name,
+  //       INPUT_OBJECT: fieldType.name,
+  //       INTERFACE: fieldType.name,
+  //       UNION: fieldType.name,
+  //     };
 
-      return a[fieldType.kind] || "any";
-    }
+  //     return a[fieldType.kind] || "any";
+  //   }
 
-    // Use the imported shopify-types.json instead of response.data.__schema.types
-    const types = generateTypeScriptTypes(shopifyTypes as GraphQLType[]);
-    console.log(types); // Output all types as TypeScript code
-    setGeneratedTypes(types); // Store the generated types in state if you want to display them
-  }, []);
+  //   // Use the imported shopify-types.json instead of response.data.__schema.types
+  //   const types = generateTypeScriptTypes(shopifyTypes as GraphQLType[]);
+  //   console.log(types); // Output all types as TypeScript code
+  //   setGeneratedTypes(types); // Store the generated types in state if you want to display them
+  // }, []);
 
   const generate = useCallback(async () => {
     try {
@@ -131,7 +130,7 @@ export function Playground() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          typeDefs: print(parse(generatedTypes)),
+          // typeDefs: print(parse(generatedTypes)),
           query,
           apiKey,
         }),
@@ -159,7 +158,7 @@ export function Playground() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, generatedTypes, query]);
+  }, [apiKey, query]);
 
   return (
     <div className="bg-graphiql-medium py-10">
@@ -197,7 +196,7 @@ export function Playground() {
                   onClick={generate}
                   disabled={loading}
                   type="submit"
-                  className="rounded text-black font-bold bg-graphiql-dark hover:bg-graphiql-light hover:text-graphiql-dark px-3"
+                  className="rounded text-white font-bold bg-graphiql-dark hover:bg-graphiql-light hover:text-graphiql-dark px-3"
                 >
                   {!loading && "Generate"}
                   {loading && (
@@ -221,7 +220,7 @@ export function Playground() {
           )}
           <div className="flex gap-10 w-full">
             <div className="bg-graphiql-dark rounded-xl w-5/6">
-              <div className="flex flex-col">
+              <div className="flex flex-row">
                 <CodeBlock
                   title="query.graphql"
                   code={generatedQuery}
@@ -236,7 +235,7 @@ export function Playground() {
             </div>
           </div>
           {/* Optionally display the generated TypeScript types */}
-          {generatedTypes && (
+          {/* {generatedTypes && (
             <div className="bg-graphiql-dark rounded-xl w-full">
               <CodeBlock
                 title="generated-types.ts"
@@ -244,7 +243,7 @@ export function Playground() {
                 language="typescript"
               />
             </div>
-          )}
+          )} */}
         </div>
       </Container>
     </div>

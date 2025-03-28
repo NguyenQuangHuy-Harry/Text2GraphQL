@@ -4,8 +4,24 @@ import { AdapterOpenAI } from "@gqlpt/adapter-openai";
 import { GQLPTClient } from "gqlpt";
 import { NextResponse } from "next/server";
 import { generateEmbedding } from "@/services/openAI";
+import fs from "fs";
+import path from "path";
 
-async function uploadSchemaToNeo4j(schemaString: string) {
+function fetchShopifyGraphQLTypes(filePath: string): string {
+  try {
+    const absolutePath = path.resolve(filePath);
+    const fileContent = fs.readFileSync(absolutePath, "utf-8");
+    console.log("Successfully fetched Shopify GraphQL types.");
+    return fileContent;
+  } catch (error) {
+    console.error("Error reading Shopify types file:", error);
+    return "";
+  }
+}
+
+async function uploadSchemaToNeo4j() {
+  const schemaString = fetchShopifyGraphQLTypes("./app/data/shopify-types.txt");
+
   const session = neo4jDriver.session();
   const schemaTypes = gql`
     ${schemaString}
@@ -43,18 +59,7 @@ export async function POST(req: Request) {
   try {
     const { query, apiKey, typeDefs } = await req.json();
 
-    const adapter = new AdapterOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    const client = new GQLPTClient({
-      adapter,
-      typeDefs,
-    });
-    await client.connect();
-
-    const result = await client.generateQueryAndVariables(query);
-
+    await uploadSchemaToNeo4j();
     return NextResponse.json({ success: true });
   } catch (error) {
     throw error;
